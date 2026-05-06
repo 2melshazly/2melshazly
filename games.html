@@ -1,0 +1,73 @@
+ <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlayStation Clone</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="ps.css">
+    
+</head>
+<section class="games-section">
+    <div class="container">
+        <h2>All Games</h2>
+         <h2>ألعاب بلايستيشن 4 معدل</h2>
+
+        <div class="game-grid" id="all-games-container">
+            </div>
+    </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
+<script>
+const mySheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRVnRxp4qoV0Bcalik_KJx3ITqdm-b4HyVjATJCbveQ3VmTKfMIqrLYJvJnPMh0XW_XjSGCP6Bx9UL/pub?output=csv'; 
+
+async function loadIfixStoreGames() {
+    try {
+        // استخدمنا mySheetURL مباشرة جوه Papa.parse عشان Spck Editor يشتغل أسرع
+        Papa.parse(mySheetURL, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                const games = results.data;
+                const container = document.getElementById('all-games-container');
+                
+                if (!container) {
+                    console.error("لم يتم العثور على id: all-games-container");
+                    return;
+                }
+                
+                container.innerHTML = ''; 
+
+                games.forEach(game => {
+                    // تأكد إن الأسماء في جوجل شيت مكتوبة (name) و (img) و (price) بنفس الحروف دي
+                    if (game.name && game.img) {
+                        const gameHTML = `
+                            <a href="${game.link || '#'}" class="game">
+                                <div class="game-img">
+                                    <img src="${game.img.trim()}" alt="${game.name}" loading="lazy">
+                                </div>
+                                <h3>${game.name}</h3>
+    <p class="game-price">${game.price}</p>
+
+                            </a>
+                        `;
+                        container.innerHTML += gameHTML;
+                    }
+                });
+            },
+            error: function(err) {
+                console.error("خطأ في تحليل البيانات:", err);
+            }
+        });
+    } catch (error) {
+        console.error("عذراً، حدث خطأ في الاتصال بجوجل شيت:", error);
+    }
+}
+
+// تشغيل الكود
+window.onload = loadIfixStoreGames;
+</script>
+
