@@ -1,73 +1,129 @@
- <head>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2M PLAYSTATION ELSHAZLY</title>
+    <title>2M Store | ألعاب بلايستيشن</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="ps.css">
-    
+    <style>
+        :root { --ps-blue: #0070d1; --ps-gray-dark: #1f1f1f; --font-sans: 'Inter', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-sans); background-color: var(--ps-gray-dark); color: #fff; padding-bottom: 80px; }
+        .container { width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
+        .games-section { padding: 4rem 0; }
+        .games-section h2 { font-size: 2.5rem; font-weight: 800; text-align: center; margin-bottom: 2.5rem; background: linear-gradient(to right, #fff, var(--ps-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .game-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+        .game-card { background-color: #2a2a2a; border-radius: 15px; overflow: hidden; border: 1px solid #333; display: flex; flex-direction: column; position: relative; }
+        .game-link { text-decoration: none; color: inherit; }
+        .game-img { aspect-ratio: 3 / 4; width: 100%; overflow: hidden; }
+        .game-img img { width: 100%; height: 100%; object-fit: cover; }
+        .game-info { padding: 12px; }
+        .game-info h3 { font-size: 1rem; font-weight: 700; margin-bottom: 5px; height: 2.5em; overflow: hidden; }
+        .game-price { color: var(--ps-blue); font-weight: 800; margin-bottom: 10px; }
+        
+        /* زرار الإضافة للسلة - ستايل سريع */
+        .add-to-cart-btn {
+            background: #fff; color: #000; border: none; padding: 10px; border-radius: 8px;
+            font-weight: 800; cursor: pointer; width: 100%; transition: background 0.1s ease;
+        }
+        .add-to-cart-btn.added { background: #22c55e; color: #fff; }
+
+        /* أيقونة السلة العائمة */
+        .cart-float {
+            position: fixed; bottom: 20px; left: 20px; background: var(--ps-blue);
+            width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); cursor: pointer; z-index: 1000;
+        }
+        .cart-count {
+            position: absolute; top: 0; right: 0; background: red; color: white;
+            width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-size: 12px; font-weight: bold;
+        }
+        @media (min-width: 1024px) { .game-grid { grid-template-columns: repeat(4, 1fr); } }
+    </style>
 </head>
-<section class="games-section">
-    <div class="container">
-        <h2>All Games</h2>
-         <h2>ألعاب بلايستيشن 4 معدل</h2>
+<body>
 
-        <div class="game-grid" id="all-games-container">
-            </div>
+    <section class="games-section">
+        <div class="container">
+            <h2>مكتبة ألعاب 2M</h2>
+            <div class="game-grid" id="all-games-container"></div>
+        </div>
+    </section>
+
+    <!-- السلة العائمة -->
+    <div class="cart-float" onclick="goToCart()">
+        🛒
+        <div class="cart-count" id="cart-count">0</div>
     </div>
-</section>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script>
+        const mySheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRVnRxp4qoV0Bcalik_KJx3ITqdm-b4HyVjATJCbveQ3VmTKfMIqrLYJvJnPMh0XW_XjSGCP6Bx9UL/pub?output=csv';
+        const DEFAULT_PRICE = "25";
+        let cart = JSON.parse(localStorage.getItem('ifix_cart')) || [];
 
-<script>
-const mySheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRVnRxp4qoV0Bcalik_KJx3ITqdm-b4HyVjATJCbveQ3VmTKfMIqrLYJvJnPMh0XW_XjSGCP6Bx9UL/pub?output=csv'; 
+        function updateCartCountOnly() {
+            document.getElementById('cart-count').innerText = cart.length;
+            localStorage.setItem('ifix_cart', JSON.stringify(cart));
+        }
 
-async function loadIfixStoreGames() {
-    try {
-        // استخدمنا mySheetURL مباشرة جوه Papa.parse عشان Spck Editor يشتغل أسرع
+        // التعديل السحري هنا: بنغير الزرار اللي بندوس عليه بس بدون ريفريش للصفحة
+        function toggleCart(btn, gameName) {
+            const index = cart.indexOf(gameName);
+            if (index > -1) {
+                cart.splice(index, 1);
+                btn.classList.remove('added');
+                btn.innerText = '➕ إضافة للطلب';
+            } else {
+                cart.push(gameName);
+                btn.classList.add('added');
+                btn.innerText = '✅ تم الاختيار';
+            }
+            updateCartCountOnly();
+        }
+
+        function goToCart() {
+            if(cart.length === 0) return alert('السلة فاضية! اختار ألعاب الأول');
+            window.location.href = 'cart.html';
+        }
+
         Papa.parse(mySheetURL, {
-            download: true,
-            header: true,
-            skipEmptyLines: true,
+            download: true, header: true, skipEmptyLines: true,
             complete: function(results) {
-                const games = results.data;
                 const container = document.getElementById('all-games-container');
+                let htmlContent = '';
                 
-                if (!container) {
-                    console.error("لم يتم العثور على id: all-games-container");
-                    return;
-                }
-                
-                container.innerHTML = ''; 
-
-                games.forEach(game => {
-                    // تأكد إن الأسماء في جوجل شيت مكتوبة (name) و (img) و (price) بنفس الحروف دي
+                results.data.forEach(game => {
                     if (game.name && game.img) {
-                        const gameHTML = `
-                            <a href="${game.link || '#'}" class="game">
-                                <div class="game-img">
-                                    <img src="${game.img.trim()}" alt="${game.name}" loading="lazy">
+                        const isAdded = cart.includes(game.name.trim());
+                        const finalPrice = (game.price && game.price.trim() !== "") ? game.price : DEFAULT_PRICE;
+                        const cleanName = game.name.trim().replace(/'/g, "\\'"); // لتفادي مشاكل الحروف في الجافاسكريبت
+                        
+                        htmlContent += `
+                            <div class="game-card">
+                                <a href="details.html?game=${encodeURIComponent(game.name.trim())}" class="game-link">
+                                    <div class="game-img"><img src="${game.img.trim()}" loading="lazy"></div>
+                                    <div class="game-info">
+                                        <h3>${game.name.trim()}</h3>
+                                        <p class="game-price">${finalPrice} ج.م</p>
+                                    </div>
+                                </a>
+                                <div style="padding: 0 12px 12px 12px;">
+                                    <button class="add-to-cart-btn ${isAdded ? 'added' : ''}" onclick="toggleCart(this, '${cleanName}')">
+                                        ${isAdded ? '✅ تم الاختيار' : '➕ إضافة للطلب'}
+                                    </button>
                                 </div>
-                                <h3>${game.name}</h3>
-    <p class="game-price">${game.price}</p>
-
-                            </a>
+                            </div>
                         `;
-                        container.innerHTML += gameHTML;
                     }
                 });
-            },
-            error: function(err) {
-                console.error("خطأ في تحليل البيانات:", err);
+                container.innerHTML = htmlContent;
+                document.getElementById('cart-count').innerText = cart.length;
             }
         });
-    } catch (error) {
-        console.error("عذراً، حدث خطأ في الاتصال بجوجل شيت:", error);
-    }
-}
-
-// تشغيل الكود
-window.onload = loadIfixStoreGames;
-</script>
-
+    </script>
+</body>
+</html>
