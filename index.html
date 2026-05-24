@@ -13,7 +13,15 @@
         body { font-family: var(--font-sans); background-color: var(--ps-gray-dark); color: #fff; padding-bottom: 80px; }
         .container { width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
         .games-section { padding: 4rem 0; }
-        .games-section h2 { font-size: 2.5rem; font-weight: 800; text-align: center; margin-bottom: 2.5rem; background: linear-gradient(to right, #fff, var(--ps-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .games-section h2 { font-size: 2.5rem; font-weight: 800; text-align: center; margin-bottom: 1.5rem; background: linear-gradient(to right, #fff, var(--ps-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        /* ستايل بار البحث الجديد */
+        .search-container { max-width: 500px; margin: 0 auto 2.5rem auto; position: relative; padding: 0 10px; }
+        .search-input { width: 100%; padding: 14px 45px 14px 20px; background-color: #2a2a2a; border: 1px solid #444; border-radius: 12px; color: #fff; font-size: 1.1rem; font-family: var(--font-sans); transition: all 0.2s ease; outline: none; text-align: right; }
+        .search-input:focus { border-color: var(--ps-blue); box-shadow: 0 0 10px rgba(0, 112, 209, 0.4); }
+        .search-icon { position: absolute; right: 25px; top: 50%; transform: translateY(-50%); font-size: 1.2rem; color: #888; pointer-events: none; }
+        .no-results { text-align: center; font-size: 1.2rem; color: #888; margin-top: 2rem; width: 100%; grid-column: 1 / -1; }
+
         .game-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
         .game-card { background-color: #2a2a2a; border-radius: 15px; overflow: hidden; border: 1px solid #333; display: flex; flex-direction: column; position: relative; }
         .game-link { text-decoration: none; color: inherit; }
@@ -23,24 +31,11 @@
         .game-info h3 { font-size: 1rem; font-weight: 700; margin-bottom: 5px; height: 2.5em; overflow: hidden; }
         .game-price { color: var(--ps-blue); font-weight: 800; margin-bottom: 10px; }
         
-        /* زرار الإضافة للسلة - ستايل سريع */
-        .add-to-cart-btn {
-            background: #fff; color: #000; border: none; padding: 10px; border-radius: 8px;
-            font-weight: 800; cursor: pointer; width: 100%; transition: background 0.1s ease;
-        }
+        .add-to-cart-btn { background: #fff; color: #000; border: none; padding: 10px; border-radius: 8px; font-weight: 800; cursor: pointer; width: 100%; transition: background 0.1s ease; }
         .add-to-cart-btn.added { background: #22c55e; color: #fff; }
 
-        /* أيقونة السلة العائمة */
-        .cart-float {
-            position: fixed; bottom: 20px; left: 20px; background: var(--ps-blue);
-            width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); cursor: pointer; z-index: 1000;
-        }
-        .cart-count {
-            position: absolute; top: 0; right: 0; background: red; color: white;
-            width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; font-size: 12px; font-weight: bold;
-        }
+        .cart-float { position: fixed; bottom: 20px; left: 20px; background: var(--ps-blue); width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); cursor: pointer; z-index: 1000; }
+        .cart-count { position: absolute; top: 0; right: 0; background: red; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; }
         @media (min-width: 1024px) { .game-grid { grid-template-columns: repeat(4, 1fr); } }
     </style>
 </head>
@@ -49,6 +44,13 @@
     <section class="games-section">
         <div class="container">
             <h2>مكتبة ألعاب 2M</h2>
+            
+            <!-- بار البحث الجديد -->
+            <div class="search-container">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" class="search-input" placeholder="ابحث عن لعبتك المفضلة..." oninput="filterGames()">
+            </div>
+
             <div class="game-grid" id="all-games-container"></div>
         </div>
     </section>
@@ -64,13 +66,13 @@
         const mySheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRVnRxp4qoV0Bcalik_KJx3ITqdm-b4HyVjATJCbveQ3VmTKfMIqrLYJvJnPMh0XW_XjSGCP6Bx9UL/pub?output=csv';
         const DEFAULT_PRICE = "25";
         let cart = JSON.parse(localStorage.getItem('ifix_cart')) || [];
+        let allGames = []; // المصفوفة العالمية لحفظ الألعاب كلها
 
         function updateCartCountOnly() {
             document.getElementById('cart-count').innerText = cart.length;
             localStorage.setItem('ifix_cart', JSON.stringify(cart));
         }
 
-        // التعديل السحري هنا: بنغير الزرار اللي بندوس عليه بس بدون ريفريش للصفحة
         function toggleCart(btn, gameName) {
             const index = cart.indexOf(gameName);
             if (index > -1) {
@@ -90,18 +92,64 @@
             window.location.href = 'cart.html';
         }
 
+        // فانكشن لرسم الألعاب على الشاشة
+        function displayGames(gamesList) {
+            const container = document.getElementById('all-games-container');
+            let htmlContent = '';
+            
+            if(gamesList.length === 0) {
+                container.innerHTML = '<div class="no-results">❌ مفيش ألعاب بالاسم ده حالياً</div>';
+                return;
+            }
+
+            gamesList.forEach(game => {
+                if (game.name && game.img) {
+                    const isAdded = cart.includes(game.name.trim());
+                    const finalPrice = (game.price && game.price.trim() !== "") ? game.price : DEFAULT_PRICE;
+                    const cleanName = game.name.trim().replace(/'/g, "\\'");
+                    
+                    htmlContent += `
+                        <div class="game-card">
+                            <a href="details.html?game=${encodeURIComponent(game.name.trim())}" class="game-link">
+                                <div class="game-img"><img src="${game.img.trim()}" loading="lazy"></div>
+                                <div class="game-info">
+                                    <h3>${game.name.trim()}</h3>
+                                    <p class="game-price">${finalPrice} ج.م</p>
+                                </div>
+                            </a>
+                            <div style="padding: 0 12px 12px 12px;">
+                                <button class="add-to-cart-btn ${isAdded ? 'added' : ''}" onclick="toggleCart(this, '${cleanName}')">
+                                    ${isAdded ? '✅ تم الاختيار' : '➕ إضافة للطلب'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            container.innerHTML = htmlContent;
+        }
+
+        // فانكشن الفلترة والبحث اللحظي
+        function filterGames() {
+            const query = document.getElementById('search-input').value.toLowerCase().trim();
+            const filtered = allGames.filter(game => {
+                return game.name && game.name.toLowerCase().includes(query);
+            });
+            displayGames(filtered);
+        }
+
+        // جلب البيانات من الشيت لأول مرة
         Papa.parse(mySheetURL, {
             download: true, header: true, skipEmptyLines: true,
             complete: function(results) {
-                const container = document.getElementById('all-games-container');
-                let htmlContent = '';
-                
-                results.data.forEach(game => {
-                    if (game.name && game.img) {
-                        const isAdded = cart.includes(game.name.trim());
-                        const finalPrice = (game.price && game.price.trim() !== "") ? game.price : DEFAULT_PRICE;
-                        const cleanName = game.name.trim().replace(/'/g, "\\'"); // لتفادي مشاكل الحروف في الجافاسكريبت
-                        
+                allGames = results.data; // حفظ البيانات في المصفوفة عشان نبحث جواها
+                displayGames(allGames); // عرض الألعاب كلها في البداية
+                document.getElementById('cart-count').innerText = cart.length;
+            }
+        });
+    </script>
+</body>
+</html>                        
                         htmlContent += `
                             <div class="game-card">
                                 <a href="details.html?game=${encodeURIComponent(game.name.trim())}" class="game-link">
